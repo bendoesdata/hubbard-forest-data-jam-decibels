@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decibels — Hubbard Brook Forest</title>
+    <meta name="description" content="An immersive audiovisual experience exploring how the Hubbard Brook forest responds to storms, through data sonification and generative visuals.">
+
+    <!-- Google Fonts: Space Grotesk (geometric sans-serif) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Skip link for keyboard/screen reader users -->
+    <a href="#controls" class="skip-link">Skip to controls</a>
+
+    <!-- WebGL shader canvas (decorative — hidden from assistive tech) -->
+    <canvas id="shader-canvas" aria-hidden="true"></canvas>
+
+    <!-- Splash screen overlay -->
+    <div id="splash" role="dialog" aria-modal="true" aria-describedby="splash-desc">
+        <div class="splash-content">
+            <p id="splash-desc"></p>
+            <p class="splash-note"></p>
+            <button id="splash-enter" type="button" autofocus></button>
+        </div>
+    </div>
+
+    <!-- Main content (hidden until splash is dismissed) -->
+    <main id="main-content" aria-hidden="true">
+
+        <!-- Top-left: site title and date -->
+        <header id="site-header">
+            <h1 id="site-title"></h1>
+            <div id="date-display" aria-live="polite" aria-atomic="true">
+                Loading data…
+            </div>
+        </header>
+
+        <!-- Top-right: info button -->
+        <div id="info-btn-container">
+            <button id="info-btn" type="button" aria-label="About this experience" aria-haspopup="dialog">
+                i
+            </button>
+        </div>
+
+        <!-- Info dialog (hidden by default) -->
+        <div id="info-dialog" role="dialog" aria-modal="true" aria-labelledby="info-title" class="hidden">
+            <div class="info-content">
+                <h2 id="info-title"></h2>
+                <p id="info-sonification"></p>
+                <h3>Credits</h3>
+                <ul id="info-credits"></ul>
+                <button id="info-close" type="button">Close</button>
+            </div>
+        </div>
+
+        <!-- Storm event announcements (screen reader only) -->
+        <div id="storm-announce" class="sr-only" role="status" aria-live="assertive" aria-atomic="true"></div>
+
+        <!-- Controls area at bottom of screen -->
+        <nav id="controls" aria-label="Playback controls">
+
+            <!-- Play/Stop button (above timeline, left-aligned) -->
+            <button id="play-btn" type="button" aria-label="Play">
+                <span class="play-icon" aria-hidden="true">&#9654;</span>
+                <span class="stop-icon hidden" aria-hidden="true">&#9632;</span>
+            </button>
+
+            <!-- Storm markers (clickable circles above the timeline) -->
+            <div id="storm-markers" aria-hidden="true"></div>
+
+            <!-- Timeline -->
+            <div id="timeline-container">
+                <canvas
+                    id="timeline-canvas"
+                    role="slider"
+                    tabindex="0"
+                    aria-label="Timeline — scrub through one year of data"
+                    aria-valuemin="0"
+                    aria-valuemax="8759"
+                    aria-valuenow="0"
+                    aria-valuetext="23 March 2024"
+                ></canvas>
+            </div>
+
+        </nav>
+
+    </main>
+
+    <!-- Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <!-- Application modules (order matters) -->
+    <script src="shader.js"></script>
+    <script src="timeline.js"></script>
+    <script src="app.js"></script>
+
+</body>
+</html>

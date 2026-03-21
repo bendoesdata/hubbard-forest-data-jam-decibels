@@ -1,0 +1,36 @@
+{
+    "playback": {
+        "hoursPerSecond": 2,
+        "stormThreshold": 5,
+        "audioPath": "audio/sonification.mp3"
+    },
+
+    "splash": {
+        "description": "This is an immersive audiovisual experience exploring how the Hubbard Brook Experimental Forest responds to storms. Precipitation, streamflow, and other hydrological data from one full year are woven into generative visuals and sound.",
+        "audioNote": "This experience includes audio. Please ensure your sound is on.",
+        "enterButton": "Begin Experience"
+    },
+
+    "info": {
+        "title": "About This Experience",
+        "sonification": "The sonification maps hydrological data from the Hubbard Brook Experimental Forest to sound. Precipitation, streamflow, evapotranspiration, and soil moisture are each mapped to different sonic parameters, allowing you to hear how these variables relate to each other — and how they evolve in the hours following large precipitation events. Air temperature is used to differentiate between rainfall and snowfall.",
+        "credits": [
+            "Duncan Geere",
+            "Simon Rydén",
+            "Ben Dexter Cooley",
+            "Max Graze",
+            "Micah Lewis"
+        ]
+    },
+
+    "ui": {
+        "siteTitle": "Hubbard Brook",
+        "timelineLabel": "Timeline — scrub through one year of data",
+        "skipLinkText": "Skip to controls"
+    },
+
+    "data": {
+        "unnormalizedPath": "data/unnormalized/all_data_unnormalized.csv",
+        "normalizedPath": "data/normalized/all_data_normalized.csv"
+    }
+}
