@@ -39,7 +39,7 @@ async function loadShader(path) {
   return await response.text();
 }
 
-const DEM_PATH = "./assets/dem.tiff";
+const DEM_PATH = "./assets/dem.png";
 const boxBlurPath = await loadShader("./shaders/boxBlur.frag");
 const normalPassPath = await loadShader("./shaders/normalPass.frag");
 const renderHeightmapPath = await loadShader("./shaders/renderHeightmap.frag");
