@@ -30,10 +30,16 @@ import { ImagePass } from "./glslUtils/ImagePass.js";
 // Make ShaderManager available globally for app.js
 window.ShaderManager = (() => {
 
+    //little attenuators
+    const particleAmtAtten = 4.0;
+    const floodSpeedAtten = 10.0;
+    const floodSpeedMax = 0.5;
+    const floodAmtAtten = 0.75;
+
     // --- Baked parameters (set at init, not changeable at runtime) ---
     const mapHeight = 0.65;
-    const blurRadius = 2;
-    const blurPreshrink = 0;
+    const blurRadius = 1;
+    const blurPreshrink = 1;
     const smallDetail = 0.5;
     const maxParticlesSqrt = 512;
     const blurPreshrinkFF = 0;
@@ -41,7 +47,7 @@ window.ShaderManager = (() => {
 
     // --- Runtime parameters ---
     const ambientLight = 0.1;
-    const lightIntensity = 2.2;
+    const lightIntensity = 2.0;
     const lightHeight = 0.55;
     const lerpFactor = 0.05;
 
@@ -388,13 +394,13 @@ window.ShaderManager = (() => {
 
             // Precipitation → particle count (squared, as Simon does)
             const precipValue = data.precipitation || 0;
-            const particleCount = precipValue ** 2;
+            const particleCount = precipValue * particleAmtAtten; //tweak
 
             // Soil moisture → flood amount
-            const floodAmt = data.soilMoisture || 0;
+            const floodAmt = Math.min(data.soilMoisture * floodAmtAtten, 1) ** 1.0 || 0;
 
             // Streamflow → flood animation speed
-            const floodSpeed = data.streamflow || 0;
+            const floodSpeed = Math.min(data.streamflow * floodSpeedAtten, floodSpeedMax) || 0;
             floodTime += floodSpeed * Math.max(deltaTime, 0);
 
             // --- Animate (from Simon's animate function) ---

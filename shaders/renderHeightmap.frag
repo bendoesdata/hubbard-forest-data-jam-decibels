@@ -30,6 +30,32 @@ vec4 textureFitBest(sampler2D tex, inout vec2 uv, float inputAspect, float targe
     }
 }
 
+vec4 textureFitBestHack(sampler2D tex, in vec2 uv, float inputAspect, float targetAspect) {
+    float scale = 1.0;
+    float alpha = 1.0;
+    uv = (uv - 0.5) * scale + 0.5;
+    if(inputAspect > targetAspect) {
+        float scaledHeight = targetAspect / inputAspect;
+        float centeredV = (uv.y - 0.5) / scaledHeight + 0.5;
+
+        vec2 newUV = vec2(uv.x, centeredV);
+
+        if(centeredV < 0.0 || centeredV > 1.0) {
+            alpha = 0.0;
+        }
+        return texture(tex, newUV);
+        uv = newUV;
+    } else {
+        float scaledWidth = inputAspect / targetAspect;
+        float centeredU = (uv.x - 0.5) / scaledWidth + 0.5;
+        if(centeredU < 0.0 || centeredU > 1.0) {
+            alpha = 0.0;
+        }
+        return texture(tex, vec2(centeredU, uv.y));
+        uv = vec2(centeredU, uv.y);
+    }
+}
+
 vec2 screenToWorld(vec2 mouseNDC, float renderAspect, float imgAspect) {
     vec2 p = mouseNDC;
 
@@ -51,6 +77,19 @@ float sq(vec2 p, vec2 s) {
 
     return smoothstep(0.0, fwidth(d), d);
 
+}
+
+vec2 slope(sampler2D tex, vec2 uv) {
+    const float texel = 0.01;
+    float alpha = 0.0;
+    vec2 e = vec2(texel, 0.0);
+
+    float r = textureFitBestHack(tex, uv + e.xy, u_imgAspect, u_renderAspect).x;
+    float l = textureFitBestHack(tex, uv - e.xy, u_imgAspect, u_renderAspect).x;
+    float t = textureFitBestHack(tex, uv + e.yx, u_imgAspect, u_renderAspect).x;
+    float b = textureFitBestHack(tex, uv - e.yx, u_imgAspect, u_renderAspect).x;
+
+    return vec2(r - l, t - b);
 }
 
 out vec4 fragColor;
@@ -91,11 +130,21 @@ void main() {
     col += 1.0;
     col *= mix(vec3(1), vec3(0.0, 0.0, 0.0), smoothstep(0.9, 1.0, sin(height * 50.0) * 1.0 - height));
 
+    //float gradMag = length(slope(normal_tex, vUV.xy));
+   // gradMag = smoothstep(0.1, 0.5, gradMag);
+   // col = mix(col, vec3(0.102, 0.1373, 0.2824), gradMag * 0.5);
+
     col = mix(col, vec3(0.05, 0.1, 0.5), flood);
     float lightContritb = NoL * 0.75 + NoH * 0.25;
 
     col *= lightContritb * lightAtten * u_lightIntensity;
     //col *= infos.w * (1.0 - flood);
+    
+
+
+  
 
     fragColor = vec4(col * alpha, alpha);
+
+   
 }

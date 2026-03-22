@@ -13,7 +13,8 @@ void main() {
 
     float lifeFade = sin(life * 3.14159);
     vec3 col = mix(vec3(1), vec3(0.1, 0.2, 1.0), idHash);
-    col *= lifeFade;
-    fragColor = clamp(vec4(col, 0.2), vec4(0.0), vec4(1));// * sqrt(sin(life * 3.14159)));
+    float alpha = 0.5;
+    col *= lifeFade * alpha;
+    fragColor = clamp(vec4(col, alpha), vec4(0.0), vec4(1));// * sqrt(sin(life * 3.14159)));
 
 }

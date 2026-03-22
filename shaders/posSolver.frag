@@ -38,24 +38,8 @@ vec2 slope(sampler2D tex, vec2 uv, float lod) {
     return vec2(r - l, t - b);
 }
 
-float dot_noise(vec3 p) {
-    //The golden ratio:
-    //https://mini.gmshaders.com/p/phi
-    const float PHI = 1.618033988;
 
-    //Rotating the golden angle on the vec3(1, phi, phi*phi) axis
-    const mat3 GOLD = mat3(-0.571464913, +0.814921382, +0.096597072, -0.278044873, -0.303026659, +0.911518454, +0.772087367, +0.494042493, +0.399753815);
 
-    //Gyroid with irrational orientations and scales
-    return dot(cos(GOLD * p), sin(PHI * p * GOLD)) / 3.0;
-    //Ranges from [-3 to +3]
-}
-/*
-vec3 getNormal(sampler2D tex, vec2 uv, float zHeight){
-	
-	return normalize(vec3(-slope(tex, uv),zHeight));
-}
-*/
 
 out vec4 fragColor;
 void main() {
@@ -68,7 +52,7 @@ void main() {
 
     float initActive = initInfo.b;
     float speed = 0.5 * hash22(vUV.xy * 5.0).x + 0.3;
-    life += 0.01 * speed * (hash22(vUV.xy).x * 0.8 + 0.2);
+    life += 0.005 * speed * (hash22(vUV.xy).x * 0.8 + 0.2);
     bool dead = life > 1.0;
 
     life = dead ? 0.0 : life;
@@ -76,7 +60,7 @@ void main() {
     isactive = dead ? initActive : isactive;
 
 	//p += (hash22(vUV.xy + u_frame) * 2.0 - 1.0) * 0.001;
-    vec2 grad = -slope(heightMap_tex, p, 0.0) * 1.0;
+    vec2 grad = -slope(heightMap_tex, p, 0.0) * 0.5;
 
     vec2 vel = grad;
     float h = texture(heightMap_tex, p).x;
@@ -85,9 +69,8 @@ void main() {
     discardable = h > 0.001 ? 1.0 : 0.0;
     discardable = isactive * discardable * float(length(vel) > 0.0001);
 
-    float pct = dot_noise(vec3(p * vec2(u_aspect, 1.0), u_time)) * 0.5 + 0.5;
 
-    vel = mix(vel, vel.yx * vec2(-1, 1), 0.0);
+    vel += 0.001 * (hash22(vUV.xy + 22.2221 + fract(u_time * 0.1)) * 2.0 - 1.0);
 
     p += vel * vec2(1.0 / u_aspect, 1) * speed * 0.7;
     vec4 color = vec4(p, discardable, life);
