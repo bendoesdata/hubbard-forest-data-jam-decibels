@@ -32,7 +32,7 @@ window.ShaderManager = (() => {
 
     //little attenuators
     const particleAmtAtten = 4.0;
-    const floodSpeedAtten = 10.0;
+    const floodSpeedAtten = 5.0;
     const floodSpeedMax = 0.5;
     const floodAmtAtten = 0.75;
 

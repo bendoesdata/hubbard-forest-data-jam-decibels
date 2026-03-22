@@ -135,7 +135,7 @@ void main() {
    // col = mix(col, vec3(0.102, 0.1373, 0.2824), gradMag * 0.5);
 
     col = mix(col, vec3(0.05, 0.1, 0.5), flood);
-    float lightContritb = NoL * 0.75 + NoH * 0.25;
+    float lightContritb = NoL * 0.75 + NoH * 0.9;
 
     col *= lightContritb * lightAtten * u_lightIntensity;
     //col *= infos.w * (1.0 - flood);
