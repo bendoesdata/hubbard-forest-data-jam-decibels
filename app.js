@@ -448,7 +448,7 @@ const App = (() => {
         // Get current normalized data values for shader uniforms
         const row = normData[currentIndex] || {};
 
-        ShaderManager.render({
+        window.ShaderManager.render({
             time: elapsed,
             precipitation: parseFloat(row.Precipitation_mm_hr) || 0,
             streamflow: parseFloat(row.Stream_Discharge_mm_hr) || 0,
@@ -505,7 +505,7 @@ const App = (() => {
             splashEnter: document.getElementById('splash-enter'),
             mainContent: document.getElementById('main-content'),
             siteTitle: document.getElementById('site-title'),
-            shaderCanvas: document.getElementById('shader-canvas'),
+            shaderContainer: document.getElementById('shader-container'),
             timelineCanvas: document.getElementById('timeline-canvas'),
             stormMarkers: document.getElementById('storm-markers'),
             playBtn: document.getElementById('play-btn'),
@@ -566,13 +566,18 @@ const App = (() => {
 
         // Window resize handler
         window.addEventListener('resize', () => {
-            ShaderManager.resize();
+            window.ShaderManager.resize();
             Timeline.resize();
         });
 
-        // Initialise WebGL shader
+        // Wait for ShaderManager to be available (loaded as ES module)
+        while (!window.ShaderManager) {
+            await new Promise(r => setTimeout(r, 50));
+        }
+
+        // Initialise Three.js terrain renderer
         try {
-            await ShaderManager.init(els.shaderCanvas);
+            await window.ShaderManager.init(els.shaderContainer);
         } catch (e) {
             console.error('Shader initialisation failed:', e.message);
         }

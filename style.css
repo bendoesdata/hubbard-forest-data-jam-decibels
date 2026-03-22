@@ -5,13 +5,13 @@
 
 /* --- Design tokens --- */
 :root {
-    --bg:           #0a0a0f;
+    --bg:           #000000;
     --text:         #c8c8c8;
     --text-dim:     #7a7a8a;
     --blue:         #4a90d9;
     --blue-bright:  #6ab0ff;
     --yellow:       #e8c547;
-    --controls-bg:  rgba(10, 10, 15, 0.85);
+    --controls-bg:  rgba(0, 0, 0, 0.85);
     --font:         'Space Grotesk', system-ui, sans-serif;
 }
 
@@ -68,13 +68,13 @@ body {
     border: 0;
 }
 
-/* --- Shader canvas (fullscreen background) --- */
-#shader-canvas {
+/* --- Shader container (vertically constrained to sit between header and timeline) --- */
+#shader-container {
     position: fixed;
-    top: 0;
+    top: 80px;           /* clear the header area */
     left: 0;
     width: 100%;
-    height: 100%;
+    height: calc(100% - 80px - 120px);  /* top margin + bottom margin for controls */
     z-index: 0;
 }
 
@@ -425,6 +425,12 @@ body {
         width: 36px;
         height: 36px;
         font-size: 16px;
+    }
+
+    /* Adjust shader container for smaller header/controls */
+    #shader-container {
+        top: 60px;
+        height: calc(100% - 60px - 100px);
     }
 
     /* On mobile: tighter controls */

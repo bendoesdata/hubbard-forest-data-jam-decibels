@@ -1,213 +1,449 @@
 /**
- * shader.js — WebGL setup and shader management
+ * shader.js — Three.js terrain renderer (based on Simon Rydén's shader pipeline)
  *
- * Handles:
- *  - WebGL context creation
- *  - Shader compilation (vertex + fragment)
- *  - Fullscreen quad geometry
- *  - Uniform updates each frame
+ * Wraps Simon's multi-pass DEM terrain renderer with particle flow into
+ * a ShaderManager API that app.js can call each frame with data values.
  *
- * The shader files (rect.vert, draw.frag) are loaded as text and compiled
- * at runtime. To swap the shader, replace draw.frag with a new file.
+ * Pipeline (10 passes):
+ *   1. boxBlurPass        — blur the DEM heightmap
+ *   2. normalPass         — compute surface normals from blurred DEM
+ *   3. boxBlurFlowFieldPass — smoother blur for particle flow guidance
+ *   4. initPPass          — generate initial particle positions
+ *   5. posSolver          — simulate particle movement (feedback loop)
+ *   6. renderHeightmap    — shade the terrain with lighting + flood effect
+ *   7. scene render       — render instanced particles to offscreen target
+ *   8. (trailDecayPass)   — particle trails (commented out, ready to enable)
+ *   9. postProcess        — composite particles + terrain to screen
+ *
+ * Data mapping:
+ *   - precipitation  → particle count (u_partAmt)
+ *   - soilMoisture   → flood amount (u_flood)
+ *   - streamflow     → flood animation speed
+ *   - light position → mouse-controlled
  */
 
-const ShaderManager = (() => {
-    // --- Private state ---
-    let gl = null;            // WebGL rendering context
-    let program = null;       // Compiled shader program
-    let uniforms = {};        // Cached uniform locations
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.182.0/build/three.module.js";
+import { GLSLPass } from "./glslUtils/GLSLPass.js";
+import { FeedbackLoop } from "./glslUtils/FeedbackLoop.js";
+import { ImagePass } from "./glslUtils/ImagePass.js";
 
-    // Names of all uniforms we send to the shader
-    const UNIFORM_NAMES = [
-        'u_res',
-        'u_time',
-        'u_precipitation',
-        'u_streamflow',
-        'u_evapotranspiration',
-        'u_soil_moisture',
-        'u_snow',
-        'u_temperature',
-        'u_progress',
-    ];
+// Make ShaderManager available globally for app.js
+window.ShaderManager = (() => {
+
+    // --- Baked parameters (set at init, not changeable at runtime) ---
+    const mapHeight = 0.65;
+    const blurRadius = 2;
+    const blurPreshrink = 0;
+    const smallDetail = 0.5;
+    const maxParticlesSqrt = 512;
+    const blurPreshrinkFF = 0;
+    const blurRadiusFF = 9;
+
+    // --- Runtime parameters ---
+    const ambientLight = 0.1;
+    const lightIntensity = 2.2;
+    const lightHeight = 0.55;
+    const lerpFactor = 0.05;
+
+    // --- State ---
+    let container = null;
+    let renderer = null;
+    let scene = null;
+    let camera = null;
+    let imgAspect = 1;
+    let width = 0;
+    let height = 0;
+    let aspect = 1;
+
+    // Light position (mouse-controlled)
+    let lightPos = new THREE.Vector3(0.15, 0.25, lightHeight);
+    let targetLightPos = new THREE.Vector3(0.15, 0.25, lightHeight);
+
+    // Render passes
+    let boxBlurPass, normalPass, renderHeightmap, boxBlurFlowFieldPass;
+    let initPPass, posFeedback, posSolver;
+    let instancedMaterial, particleRT;
+    let trailFeedback, trailDecayPass, postProcess;
+
+    // Animation state
+    let initialized = true;
+    let floodTime = 0.0;
+    let lastRenderTime = 0;
 
     /**
-     * Compile a single shader (vertex or fragment) from source text.
-     * Throws an error with the shader log if compilation fails.
+     * Load a shader source file as text.
      */
-    function compileShader(source, type) {
-        const shader = gl.createShader(type);
-        gl.shaderSource(shader, source);
-        gl.compileShader(shader);
-
-        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            const log = gl.getShaderInfoLog(shader);
-            gl.deleteShader(shader);
-            throw new Error(`Shader compile error: ${log}`);
-        }
-        return shader;
+    async function loadShader(path) {
+        const response = await fetch(path);
+        return await response.text();
     }
 
     /**
-     * Link vertex and fragment shaders into a program.
-     * Throws an error if linking fails.
+     * Compute orthographic camera bounds to cover the DEM aspect ratio.
+     * (Copied from Simon's script.js)
      */
-    function linkProgram(vertShader, fragShader) {
-        const prog = gl.createProgram();
-        gl.attachShader(prog, vertShader);
-        gl.attachShader(prog, fragShader);
-        gl.linkProgram(prog);
-
-        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-            const log = gl.getProgramInfoLog(prog);
-            gl.deleteProgram(prog);
-            throw new Error(`Program link error: ${log}`);
-        }
-        return prog;
-    }
-
-    /**
-     * Create a fullscreen quad (two triangles covering the viewport).
-     * Uses position and texcoord attributes.
-     */
-    function createFullscreenQuad() {
-        // Positions: clip space (-1 to 1)
-        const positions = new Float32Array([
-            -1, -1,
-             1, -1,
-            -1,  1,
-             1,  1,
-        ]);
-
-        // Texture coordinates (0 to 1)
-        const texCoords = new Float32Array([
-            0, 0,
-            1, 0,
-            0, 1,
-            1, 1,
-        ]);
-
-        // Position buffer
-        const posBuf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
-        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
-
-        const aPosition = gl.getAttribLocation(program, 'aPosition');
-        gl.enableVertexAttribArray(aPosition);
-        gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
-
-        // Texcoord buffer
-        const texBuf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, texBuf);
-        gl.bufferData(gl.ARRAY_BUFFER, texCoords, gl.STATIC_DRAW);
-
-        const aTexCoord = gl.getAttribLocation(program, 'aTexCoord');
-        gl.enableVertexAttribArray(aTexCoord);
-        gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
-    }
-
-    /**
-     * Cache all uniform locations for fast access during rendering.
-     */
-    function cacheUniforms() {
-        uniforms = {};
-        for (const name of UNIFORM_NAMES) {
-            uniforms[name] = gl.getUniformLocation(program, name);
+    function getOrthoBounds(renderAspect, imgAspect) {
+        if (imgAspect > renderAspect) {
+            const h = imgAspect / renderAspect;
+            return { left: -imgAspect, right: imgAspect, top: h, bottom: -h };
+        } else {
+            const w = renderAspect;
+            return { left: -w, right: w, top: 1, bottom: -1 };
         }
     }
 
     /**
-     * Fetch a text file (shader source) from the server.
+     * Update camera projection to match current aspect ratio.
      */
-    async function fetchShaderSource(url) {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`Failed to load shader: ${url}`);
-        }
-        return response.text();
+    function updateCamera() {
+        const b = getOrthoBounds(aspect, imgAspect);
+        camera.left = b.left;
+        camera.right = b.right;
+        camera.top = b.top;
+        camera.bottom = b.bottom;
+        camera.updateProjectionMatrix();
     }
 
     // --- Public API ---
 
     return {
         /**
-         * Initialise WebGL: get context, load & compile shaders, set up geometry.
-         * Call this once on page load.
-         *
-         * @param {HTMLCanvasElement} canvas — the canvas element to render into
+         * Initialise the Three.js renderer and full shader pipeline.
+         * @param {HTMLElement} containerEl — div to render into
          */
-        async init(canvas) {
-            // Get WebGL context
-            gl = canvas.getContext('webgl', { antialias: false, alpha: false });
-            if (!gl) {
-                throw new Error('WebGL not supported in this browser.');
-            }
+        async init(containerEl) {
+            container = containerEl;
 
-            // Load shader source files
-            const [vertSrc, fragSrc] = await Promise.all([
-                fetchShaderSource('rect.vert'),
-                fetchShaderSource('draw.frag'),
+            // Load all shader sources
+            const [
+                boxBlurPath, normalPassPath, renderHeightmapPath,
+                posSolverPath, instancingVert, instancingFrag,
+                trailDecayShaderSrc, postProcessShaderSrc, initPPath
+            ] = await Promise.all([
+                loadShader("./shaders/boxBlur.frag"),
+                loadShader("./shaders/normalPass.frag"),
+                loadShader("./shaders/renderHeightmap.frag"),
+                loadShader("./shaders/posSolver.frag"),
+                loadShader("./shaders/renderPoints.vert"),
+                loadShader("./shaders/renderPoints.frag"),
+                loadShader("./shaders/trailDecay.frag"),
+                loadShader("./shaders/postProcess.frag"),
+                loadShader("./shaders/initP.frag"),
             ]);
 
-            // Compile and link
-            const vertShader = compileShader(vertSrc, gl.VERTEX_SHADER);
-            const fragShader = compileShader(fragSrc, gl.FRAGMENT_SHADER);
-            program = linkProgram(vertShader, fragShader);
+            // Load DEM heightmap image
+            const DEM_IMG = new ImagePass("./assets/dem.png", {
+                wrapMode: "repeat",
+                filterMode: "mipmap",
+                generateMipmaps: true,
+                format: THREE.RGBAFormat,
+                type: THREE.HalfFloatType,
+            });
+            await DEM_IMG.ready;
 
-            // Clean up individual shaders (they're linked into the program now)
-            gl.deleteShader(vertShader);
-            gl.deleteShader(fragShader);
+            const imgRes = new THREE.Vector2(DEM_IMG.width, DEM_IMG.height);
+            imgAspect = imgRes.x / imgRes.y;
+            const halfRes = new THREE.Vector2(DEM_IMG.width / 2.0, DEM_IMG.height / 2.0);
+            const quarterRes = new THREE.Vector2(DEM_IMG.width / 4.0, DEM_IMG.height / 4.0);
+            const zHeight = 1 / mapHeight / quarterRes.y;
 
-            // Use the program and set up geometry
-            gl.useProgram(program);
-            createFullscreenQuad();
-            cacheUniforms();
+            // Create Three.js renderer
+            renderer = new THREE.WebGLRenderer();
+            scene = new THREE.Scene();
+            container.appendChild(renderer.domElement);
 
-            // Set initial viewport
-            this.resize();
+            width = container.clientWidth;
+            height = container.clientHeight;
+            aspect = width / height;
+            renderer.setSize(width, height);
+
+            // Camera
+            camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
+            camera.position.set(0, 0, 1);
+            camera.lookAt(0, 0, 0);
+            scene.add(camera);
+            updateCamera();
+
+            // --- RENDER PASSES (from Simon's script.js) ---
+
+            // 1. Box blur on DEM
+            boxBlurPass = new GLSLPass(renderer, {
+                fragmentShader: boxBlurPath,
+                uniforms: {
+                    u_radius: { value: blurRadius },
+                    u_resolution: { value: [halfRes.x, halfRes.y] },
+                    u_preshrink: { value: blurPreshrink },
+                    image_tex: { value: DEM_IMG.texture },
+                    u_smallDetail: { value: smallDetail },
+                    u_amp: { value: 1.0 },
+                },
+                width: imgRes.x,
+                height: imgRes.y,
+            });
+            boxBlurPass.render();
+
+            // 2. Normal pass
+            normalPass = new GLSLPass(renderer, {
+                fragmentShader: normalPassPath,
+                uniforms: {
+                    u_zHeight: { value: zHeight },
+                    heightMap_tex: { value: boxBlurPass.texture },
+                },
+                width: imgRes.x,
+                height: imgRes.y,
+                generateMipmaps: true,
+                filterMode: "mipmap",
+            });
+            normalPass.render();
+
+            // 3. Render heightmap (shaded terrain + flood)
+            renderHeightmap = new GLSLPass(renderer, {
+                fragmentShader: renderHeightmapPath,
+                uniforms: {
+                    u_renderAspect: { value: aspect },
+                    u_imgAspect: { value: imgAspect },
+                    normal_tex: { value: normalPass.texture },
+                    u_sunPos: { value: lightPos },
+                    u_zHeight: { value: zHeight },
+                    u_time: { value: 0.0 },
+                    u_flood: { value: 0.2 },
+                    u_ambientLight: { value: ambientLight },
+                    u_lightIntensity: { value: lightIntensity },
+                },
+                width: width,
+                height: height,
+            });
+
+            // 4. Flow field blur (lower resolution, for particle guidance)
+            boxBlurFlowFieldPass = new GLSLPass(renderer, {
+                fragmentShader: boxBlurPath,
+                uniforms: {
+                    u_radius: { value: blurRadiusFF },
+                    u_resolution: { value: [halfRes.x, halfRes.y] },
+                    u_preshrink: { value: blurPreshrinkFF },
+                    image_tex: { value: DEM_IMG.texture },
+                    u_smallDetail: { value: 0 },
+                    u_amp: { value: 0.5 },
+                },
+                width: quarterRes.x,
+                height: quarterRes.y,
+                format: THREE.RGBAFormat,
+                type: THREE.HalfFloatType,
+                generateMipmaps: true,
+            });
+            boxBlurFlowFieldPass.render();
+
+            // 5. Particle init
+            const particleCount = 0.3 ** 2;
+            initPPass = new GLSLPass(renderer, {
+                fragmentShader: initPPath,
+                uniforms: {
+                    u_partAmt: { value: particleCount },
+                    u_mouse: { value: [lightPos.x, lightPos.y] },
+                },
+                width: maxParticlesSqrt,
+                height: maxParticlesSqrt,
+            });
+            initPPass.render();
+
+            // 6. Particle position solver (feedback loop)
+            posFeedback = new FeedbackLoop(renderer, null, {
+                width: maxParticlesSqrt,
+                height: maxParticlesSqrt,
+            });
+
+            posSolver = new GLSLPass(renderer, {
+                fragmentShader: posSolverPath,
+                uniforms: {
+                    initP_tex: { value: initPPass.texture },
+                    heightMap_tex: { value: boxBlurFlowFieldPass.texture },
+                    fb_tex: { value: posFeedback.texture },
+                    u_aspect: { value: imgAspect },
+                    u_time: { value: 0.0 },
+                },
+                width: maxParticlesSqrt,
+                height: maxParticlesSqrt,
+            });
+            posFeedback.sourcePass = posSolver;
+            posSolver.render();
+
+            // 7. Instanced particle geometry
+            const pointCount = maxParticlesSqrt * maxParticlesSqrt;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array([0, 0, 0]);
+            geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+
+            const instancedGeometry = new THREE.InstancedBufferGeometry();
+            instancedGeometry.index = geometry.index;
+            instancedGeometry.attributes.position = geometry.attributes.position;
+            instancedGeometry.instanceCount = pointCount;
+
+            instancedMaterial = new THREE.RawShaderMaterial({
+                vertexShader: instancingVert,
+                fragmentShader: instancingFrag,
+                glslVersion: THREE.GLSL3,
+                transparent: true,
+                depthWrite: true,
+                blending: THREE.NormalBlending,
+                uniforms: {
+                    pos_tex: { value: posSolver.texture },
+                    u_imgAspect: { value: imgAspect },
+                },
+                fog: false,
+            });
+
+            const points = new THREE.Points(instancedGeometry, instancedMaterial);
+            scene.add(points);
+
+            // 8. Post-process targets
+            particleRT = new THREE.WebGLRenderTarget(width, height, {
+                format: THREE.RGBAFormat,
+                type: THREE.HalfFloatType,
+            });
+
+            trailFeedback = new FeedbackLoop(renderer, null, {
+                width: width,
+                height: height,
+                format: THREE.RGBAFormat,
+                type: THREE.HalfFloatType,
+            });
+
+            trailDecayPass = new GLSLPass(renderer, {
+                fragmentShader: trailDecayShaderSrc,
+                uniforms: {
+                    col_tex: { value: null },
+                    fb_tex: { value: trailFeedback.texture },
+                    u_resolution: { value: [width, height] },
+                    u_decay: { value: 0.99 },
+                },
+                width: width,
+                height: height,
+            });
+            trailFeedback.sourcePass = trailDecayPass;
+
+            // 9. Final composite
+            postProcess = new GLSLPass(renderer, {
+                fragmentShader: postProcessShaderSrc,
+                uniforms: {
+                    part_tex: { value: trailDecayPass.texture },
+                    heightMap_tex: { value: renderHeightmap.texture },
+                },
+                width: width,
+                height: height,
+            });
+
+            // Mouse interaction for light position
+            container.addEventListener("mousemove", (e) => {
+                const rect = renderer.domElement.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+                const y = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+                targetLightPos.x = x;
+                targetLightPos.y = -y;
+            });
         },
 
         /**
-         * Update canvas size to match the window. Call on window resize.
+         * Handle window resize. Updates renderer, camera, and render targets.
          */
         resize() {
-            if (!gl) return;
+            if (!renderer || !container) return;
 
-            const canvas = gl.canvas;
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = canvas.clientWidth * dpr;
-            canvas.height = canvas.clientHeight * dpr;
-            gl.viewport(0, 0, canvas.width, canvas.height);
+            width = container.clientWidth;
+            height = container.clientHeight;
+            aspect = width / height;
+
+            renderer.setSize(width, height);
+            updateCamera();
+
+            // Update render targets
+            renderHeightmap.setSize(width, height);
+            particleRT.setSize(width, height);
+            trailFeedback.setSize(width, height);
+            trailDecayPass.setSize(width, height);
+            postProcess.setSize(width, height);
+
+            // Update uniforms that depend on size
+            renderHeightmap.setUniform("u_renderAspect", aspect);
+            trailDecayPass.setUniform("u_resolution", [width, height]);
         },
 
         /**
-         * Render one frame. Called every animation frame.
+         * Render one frame. Called every animation frame by app.js.
          *
-         * @param {Object} data — current data values to send as uniforms
-         * @param {number} data.time        — elapsed time in seconds
-         * @param {number} data.precipitation
-         * @param {number} data.streamflow
-         * @param {number} data.evapotranspiration
-         * @param {number} data.soilMoisture
-         * @param {number} data.snow
-         * @param {number} data.temperature
-         * @param {number} data.progress    — timeline progress 0-1
+         * @param {Object} data — current data values
+         * @param {number} data.time           — elapsed time in seconds
+         * @param {number} data.precipitation  — normalized 0-1 → particle count
+         * @param {number} data.streamflow     — normalized 0-1 → flood speed
+         * @param {number} data.soilMoisture   — normalized 0-1 → flood amount
          */
         render(data) {
-            if (!gl || !program) return;
+            if (!renderer) return;
 
-            // Set uniforms
-            gl.uniform2f(uniforms.u_res, gl.canvas.width, gl.canvas.height);
-            gl.uniform1f(uniforms.u_time, data.time || 0);
-            gl.uniform1f(uniforms.u_precipitation, data.precipitation || 0);
-            gl.uniform1f(uniforms.u_streamflow, data.streamflow || 0);
-            gl.uniform1f(uniforms.u_evapotranspiration, data.evapotranspiration || 0);
-            gl.uniform1f(uniforms.u_soil_moisture, data.soilMoisture || 0);
-            gl.uniform1f(uniforms.u_snow, data.snow || 0);
-            gl.uniform1f(uniforms.u_temperature, data.temperature || 0);
-            gl.uniform1f(uniforms.u_progress, data.progress || 0);
+            // Calculate delta time for flood animation
+            const now = data.time || 0;
+            const deltaTime = lastRenderTime ? (now - lastRenderTime) : (1 / 60);
+            lastRenderTime = now;
 
-            // Draw the fullscreen quad (triangle strip, 4 vertices)
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            // --- Data-driven parameters ---
+
+            // Precipitation → particle count (squared, as Simon does)
+            const precipValue = data.precipitation || 0;
+            const particleCount = precipValue ** 2;
+
+            // Soil moisture → flood amount
+            const floodAmt = data.soilMoisture || 0;
+
+            // Streamflow → flood animation speed
+            const floodSpeed = data.streamflow || 0;
+            floodTime += floodSpeed * Math.max(deltaTime, 0);
+
+            // --- Animate (from Simon's animate function) ---
+
+            // Smooth mouse-driven light position
+            lightPos.lerp(targetLightPos, lerpFactor);
+
+            // Update particle init
+            initPPass.setUniform("u_mouse", [lightPos.x, lightPos.y]);
+            initPPass.setUniform("u_partAmt", particleCount);
+            initPPass.render();
+
+            // Particle position solver with feedback
+            if (initialized) {
+                posSolver.setUniform("fb_tex", initPPass.texture);
+                initialized = false;
+            } else {
+                posSolver.setUniform("fb_tex", posFeedback.texture);
+            }
+
+            posSolver.setUniform("u_time", now);
+            posSolver.render();
+            posFeedback.capture();
+            instancedMaterial.uniforms.pos_tex.value = posSolver.texture;
+
+            // Render heightmap with data-driven flood
+            renderHeightmap.setUniform("u_time", floodTime);
+            renderHeightmap.setUniform("u_flood", floodAmt);
+            renderHeightmap.setUniform("u_sunPos", lightPos);
+            renderHeightmap.render();
+
+            // Render particles to offscreen target
+            renderer.setRenderTarget(particleRT);
+            renderer.clear();
+            renderer.render(scene, camera);
+
+            // Trail effect (commented out, ready to enable)
+            // trailDecayPass.setUniform("col_tex", particleRT.texture);
+            // trailDecayPass.setUniform("fb_tex", trailFeedback.texture);
+            // trailDecayPass.render();
+            // trailFeedback.capture();
+
+            // Final composite to screen
+            renderer.setRenderTarget(null);
+            renderer.clear();
+
+            postProcess.setUniform("part_tex", particleRT.texture);
+            postProcess.setUniform("heightMap_tex", renderHeightmap.texture);
+            renderer.render(postProcess.scene, postProcess.camera);
         },
     };
 })();

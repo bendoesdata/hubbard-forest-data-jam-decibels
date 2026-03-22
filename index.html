@@ -18,8 +18,8 @@
     <!-- Skip link for keyboard/screen reader users -->
     <a href="#controls" class="skip-link">Skip to controls</a>
 
-    <!-- WebGL shader canvas (decorative — hidden from assistive tech) -->
-    <canvas id="shader-canvas" aria-hidden="true"></canvas>
+    <!-- Three.js renderer container (decorative — hidden from assistive tech) -->
+    <div id="shader-container" aria-hidden="true"></div>
 
     <!-- Splash screen overlay -->
     <div id="splash" role="dialog" aria-modal="true" aria-describedby="splash-desc">
@@ -95,10 +95,12 @@
     <!-- Dependencies -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
-    <!-- Application modules (order matters) -->
-    <script src="shader.js"></script>
+    <!-- Application modules -->
     <script src="timeline.js"></script>
-    <script src="app.js"></script>
+    <!-- shader.js is a module (uses ES imports for Three.js), sets window.ShaderManager -->
+    <script type="module" src="shader.js?v=6"></script>
+    <!-- app.js waits for ShaderManager to be available before init -->
+    <script src="app.js?v=2"></script>
 
 </body>
 </html>
