@@ -13,13 +13,13 @@
 
     "info": {
         "title": "About This Experience",
-        "sonification": "The sonification maps hydrological data from the Hubbard Brook Experimental Forest to sound. Precipitation, streamflow, evapotranspiration, and soil moisture are each mapped to different sonic parameters, allowing you to hear how these variables relate to each other — and how they evolve in the hours following large precipitation events. Air temperature is used to differentiate between rainfall and snowfall.",
+        "sonification": "The audiovisual experience maps hydrological data from the Hubbard Brook Experimental Forest to sound. Precipitation, streamflow, and soil moisture are each mapped to different visual and sonic parameters, allowing you to hear how these variables relate to each other — and how they evolve in the hours following large precipitation events.",
         "credits": [
-            "Duncan Geere",
-            "Simon Rydén",
             "Ben Dexter Cooley",
+            "Duncan Geere",
             "Max Graze",
-            "Micah Lewis"
+            "Micah Lewis",
+            "Simon Rydén"
         ]
     },
 
