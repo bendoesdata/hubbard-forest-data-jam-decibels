@@ -114,6 +114,15 @@ body {
     color: var(--text-dim);
 }
 
+.splash-content a {
+    color: var(--blue);
+    text-decoration: underline;
+}
+
+.splash-content a:hover {
+    color: #fff;
+}
+
 #splash-enter {
     margin-top: 32px;
     padding: 14px 40px;
@@ -274,6 +283,15 @@ body {
     color: var(--text);
     font-weight: 300;
     padding: 3px 0;
+}
+
+.info-content a {
+    color: var(--blue);
+    text-decoration: underline;
+}
+
+.info-content a:hover {
+    color: #fff;
 }
 
 #info-close {

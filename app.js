@@ -64,8 +64,8 @@ const App = (() => {
      */
     function applyConfig() {
         // Splash screen
-        els.splashDesc.textContent = config.splash.description;
-        els.splashNote.textContent = config.splash.audioNote;
+        els.splashDesc.innerHTML = config.splash.description;
+        els.splashNote.innerHTML = config.splash.audioNote;
         els.splashEnter.textContent = config.splash.enterButton;
 
         // Site title
@@ -73,13 +73,13 @@ const App = (() => {
 
         // Info dialog
         els.infoTitle.textContent = config.info.title;
-        els.infoSonification.textContent = config.info.sonification;
+        els.infoSonification.innerHTML = config.info.sonification;
 
         // Credits list
         els.infoCredits.innerHTML = '';
         for (const name of config.info.credits) {
             const li = document.createElement('li');
-            li.textContent = name;
+            li.innerHTML = name;
             els.infoCredits.appendChild(li);
         }
 
