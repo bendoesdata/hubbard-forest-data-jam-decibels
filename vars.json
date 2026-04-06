@@ -15,11 +15,11 @@
         "title": "About This Experience",
         "sonification": "The audiovisual experience maps hydrological data from the Hubbard Brook Experimental Forest to sound. Precipitation, streamflow, and soil moisture are each mapped to different visual and sonic parameters, allowing you to hear how these variables relate to each other — and how they evolve in the hours following large precipitation events. ",
         "credits": [
-            "Ben Dexter Cooley",
-            "Duncan Geere",
-            "Max Graze",
+            "<a href='https://bdextercooley.com'>Ben Dexter Cooley</a>",
+            "<a href='https://duncangeere.com'>Duncan Geere</a>",
+            "<a href='https://datagrazing.com'>Max Graze</a>",
             "Micah Lewis",
-            "Simon Rydén",
+            "<a href='https://simondavidryden.me'>Simon Rydén</a>",
             "Elevation data from Thorton, NH: Hydrologic and Topographic Controls on Organic Carbon in Soils. Distributed by <a href='https://doi.org/10.5069/G9MK69T4'>OpenTopography</a> under a <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0 license</a>."
         ]
     },
