@@ -2,7 +2,7 @@
     "playback": {
         "hoursPerSecond": 2,
         "stormThreshold": 5,
-        "audioPath": "audio/sonification.mp3"
+        "audioPath": "audio/sonic-flows.mp3"
     },
 
     "splash": {
