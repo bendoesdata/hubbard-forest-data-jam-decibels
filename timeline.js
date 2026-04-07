@@ -17,7 +17,7 @@ const Timeline = (() => {
     let canvas = null;
     let ctx = null;
 
-    let precipData = [];        // Precipitation values (unnormalized, for bar colour)
+    let precipData = [];        // Data values for bar colour (precipitation or streamflow)
     let totalHours = 0;         // Total data points (8760 expected)
 
     let currentIndex = 0;       // Current playhead position (0-based hour index)
@@ -151,14 +151,14 @@ const Timeline = (() => {
          *
          * @param {HTMLCanvasElement} canvasEl — the timeline canvas element
          * @param {Object} options
-         * @param {number[]} options.precipitation — array of precipitation values (unnormalized)
-         * @param {Function} options.onScrub       — callback(index) when user scrubs
+         * @param {number[]} options.data    — array of values for bar display (unnormalized)
+         * @param {Function} options.onScrub — callback(index) when user scrubs
          */
-        init(canvasEl, { precipitation, onScrub: scrubCallback }) {
+        init(canvasEl, { data, onScrub: scrubCallback }) {
             canvas = canvasEl;
             ctx = canvas.getContext('2d');
-            precipData = precipitation;
-            totalHours = precipitation.length;
+            precipData = data;
+            totalHours = data.length;
             onScrub = scrubCallback;
 
             // Set canvas resolution to match display size

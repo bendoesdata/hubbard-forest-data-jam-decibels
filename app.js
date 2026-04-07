@@ -33,12 +33,10 @@ const App = (() => {
     let lastFrameTime = 0;      // Timestamp of last animation frame
     let fractionalIndex = 0;    // Smooth sub-hour position for fluid playback
 
-    // Audio
-    let audioCtx = null;        // Web Audio API context
-    let audioBuffer = null;     // Decoded audio buffer
-    let audioSource = null;     // Currently playing buffer source node
-    let audioStartTime = 0;     // AudioContext time when playback started
-    let audioOffset = 0;        // Offset into the audio buffer (seconds)
+    // Audio (HTML audio element for streaming large files)
+    let audioEl = null;         // <audio> element
+    let audioDuration = 0;      // Duration in seconds (set when metadata loads)
+    let audioReady = false;     // Whether audio metadata has loaded
 
     // DOM elements (cached on init)
     let els = {};
@@ -107,12 +105,18 @@ const App = (() => {
         // Extract dates from the unnormalized data (first column is the date)
         dates = unnormData.map(row => new Date(row.Date));
 
-        // Identify storm events based on precipitation threshold
-        const threshold = config.playback.stormThreshold;
+        // Identify storm events based on configured variable and threshold
+        const timelineVar = config.playback.timelineVariable || 'precipitation';
+        const isStreamflow = timelineVar === 'streamflow';
+        const threshold = isStreamflow
+            ? config.playback.streamflowThreshold
+            : config.playback.stormThreshold;
+        const columnName = isStreamflow ? 'Stream_Discharge_mm_hr' : 'Precipitation_mm_hr';
+
         stormIndices = [];
         for (let i = 0; i < unnormData.length; i++) {
-            const precip = parseFloat(unnormData[i].Precipitation_mm_hr) || 0;
-            if (precip >= threshold) {
+            const val = parseFloat(unnormData[i][columnName]) || 0;
+            if (val >= threshold) {
                 stormIndices.push(i);
             }
         }
@@ -181,54 +185,36 @@ const App = (() => {
     // ========================================================================
 
     /**
-     * Initialise the Web Audio API context. Must be called from a user gesture.
+     * Create the audio element and start loading. Streams from disk
+     * rather than decoding the entire file into memory.
      */
     function initAudio() {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-
-    /**
-     * Load the sonification audio file. Fails silently if the file
-     * isn't available yet (placeholder).
-     */
-    async function loadAudio() {
-        try {
-            const response = await fetch(config.playback.audioPath);
-            if (!response.ok) {
-                console.warn(`Audio file not found at ${config.playback.audioPath} — running without audio.`);
-                return;
-            }
-            const arrayBuffer = await response.arrayBuffer();
-            audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        } catch (e) {
-            console.warn('Could not load audio:', e.message);
-        }
+        audioEl = new Audio(config.playback.audioPath);
+        audioEl.preload = 'auto';
+        audioEl.addEventListener('loadedmetadata', () => {
+            audioDuration = audioEl.duration;
+            audioReady = true;
+        });
+        audioEl.addEventListener('error', () => {
+            console.warn(`Could not load audio from ${config.playback.audioPath}`);
+        });
     }
 
     /**
      * Start or resume audio playback from a given offset (in seconds).
      */
     function playAudio(offsetSeconds) {
-        stopAudio(); // stop any currently playing source
-
-        if (!audioBuffer || !audioCtx) return;
-
-        audioSource = audioCtx.createBufferSource();
-        audioSource.buffer = audioBuffer;
-        audioSource.connect(audioCtx.destination);
-
-        audioOffset = offsetSeconds;
-        audioStartTime = audioCtx.currentTime;
-        audioSource.start(0, offsetSeconds);
+        if (!audioEl || !audioReady) return;
+        audioEl.currentTime = offsetSeconds;
+        audioEl.play().catch(() => {}); // ignore autoplay rejections
     }
 
     /**
      * Stop audio playback.
      */
     function stopAudio() {
-        if (audioSource) {
-            try { audioSource.stop(); } catch (e) { /* already stopped */ }
-            audioSource = null;
+        if (audioEl) {
+            audioEl.pause();
         }
     }
 
@@ -237,9 +223,9 @@ const App = (() => {
      * Maps the timeline position linearly to the audio duration.
      */
     function indexToAudioOffset(index) {
-        if (!audioBuffer) return 0;
+        if (!audioReady) return 0;
         const fraction = index / (unnormData.length - 1);
-        return fraction * audioBuffer.duration;
+        return fraction * audioDuration;
     }
 
     // ========================================================================
@@ -404,9 +390,12 @@ const App = (() => {
      */
     function announceIfStorm() {
         if (stormIndices.includes(currentIndex)) {
-            const precip = parseFloat(unnormData[currentIndex].Precipitation_mm_hr) || 0;
+            const isStreamflow = (config.playback.timelineVariable || 'precipitation') === 'streamflow';
+            const colName = isStreamflow ? 'Stream_Discharge_mm_hr' : 'Precipitation_mm_hr';
+            const val = parseFloat(unnormData[currentIndex][colName]) || 0;
+            const label = isStreamflow ? 'streamflow' : 'precipitation';
             els.stormAnnounce.textContent =
-                `Storm event: ${precip.toFixed(1)} millimetres per hour precipitation on ${formatDate(dates[currentIndex])}`;
+                `Storm event: ${val.toFixed(1)} millimetres per hour ${label} on ${formatDate(dates[currentIndex])}`;
         }
     }
 
@@ -471,7 +460,7 @@ const App = (() => {
      * initialise audio, and move focus.
      */
     function dismissSplash() {
-        // Init audio context (requires user gesture)
+        // Init audio (requires user gesture to create element in gesture context)
         initAudio();
 
         // Fade out splash
@@ -484,9 +473,6 @@ const App = (() => {
         setTimeout(() => {
             els.playBtn.focus();
         }, 600); // matches CSS transition duration
-
-        // Load audio in background (non-blocking)
-        loadAudio();
     }
 
     // ========================================================================
@@ -591,14 +577,16 @@ const App = (() => {
             return;
         }
 
-        // Extract precipitation values for the timeline
-        const precipitation = unnormData.map(
-            row => parseFloat(row.Precipitation_mm_hr) || 0
+        // Extract values for the timeline (configurable variable)
+        const timelineColName = (config.playback.timelineVariable === 'streamflow')
+            ? 'Stream_Discharge_mm_hr' : 'Precipitation_mm_hr';
+        const timelineValues = unnormData.map(
+            row => parseFloat(row[timelineColName]) || 0
         );
 
         // Initialise the timeline bar
         Timeline.init(els.timelineCanvas, {
-            precipitation,
+            data: timelineValues,
             onScrub: handleScrub,
         });
 

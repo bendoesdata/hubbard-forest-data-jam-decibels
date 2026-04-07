@@ -1,7 +1,9 @@
 {
     "playback": {
         "hoursPerSecond": 2,
+        "timelineVariable": "streamflow",
         "stormThreshold": 5,
+        "streamflowThreshold": 0.5,
         "audioPath": "audio/sonic-flows.mp3"
     },
 
@@ -18,7 +20,7 @@
             "<a href='https://bdextercooley.com'>Ben Dexter Cooley</a>",
             "<a href='https://duncangeere.com'>Duncan Geere</a>",
             "<a href='https://datagrazing.com'>Max Graze</a>",
-            "Micah Lewis",
+            "<a href='https://github.com/mrplCheese'>Micah Lewis</a>",
             "<a href='https://simondavidryden.me'>Simon Rydén</a>",
             "Elevation data from Thorton, NH: Hydrologic and Topographic Controls on Organic Carbon in Soils. Distributed by <a href='https://doi.org/10.5069/G9MK69T4'>OpenTopography</a> under a <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0 license</a>."
         ]
