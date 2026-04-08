@@ -473,6 +473,22 @@ const App = (() => {
         setTimeout(() => {
             els.playBtn.focus();
         }, 600); // matches CSS transition duration
+
+        // Show tutorial annotations after splash fades
+        const annotations = document.getElementById('annotations');
+        if (annotations) {
+            setTimeout(() => {
+                annotations.classList.remove('hidden');
+            }, 1000); // slight delay after splash fades
+
+            function hideAnnotations() {
+                annotations.classList.add('hidden');
+            }
+
+            // Dismiss when play button or a storm dot is clicked
+            els.playBtn.addEventListener('click', hideAnnotations, { once: true });
+            els.stormMarkers.addEventListener('click', hideAnnotations, { once: true });
+        }
     }
 
     // ========================================================================

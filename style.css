@@ -327,6 +327,58 @@ body {
     padding-top: 32px;     /* extra space so the gradient fades gently */
 }
 
+/* --- Tutorial annotations (desktop only) --- */
+#annotations {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+    z-index: 20;
+    transition: opacity 0.6s ease;
+}
+
+#annotations.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.annotation {
+    position: absolute;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--yellow);
+    white-space: nowrap;
+}
+
+.annotation-play {
+    bottom: 140px;
+    left: 16px;
+}
+
+.annotation-dot {
+    bottom: 80px;
+    left: 200px;
+}
+
+.annotation-banner {
+    display: none;
+    position: absolute;
+    bottom: 160px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--yellow);
+    padding: 10px 16px;
+}
+
+@media (max-width: 600px) {
+    .annotation-desktop { display: none !important; }
+    .annotation-banner { display: block !important; }
+}
+
 /* --- Play/Stop button (above timeline, left-aligned) --- */
 #play-btn {
     flex-shrink: 0;

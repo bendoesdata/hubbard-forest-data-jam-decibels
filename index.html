@@ -62,6 +62,21 @@
         <!-- Storm event announcements (screen reader only) -->
         <div id="storm-announce" class="sr-only" role="status" aria-live="assertive" aria-atomic="true"></div>
 
+        <!-- Tutorial annotations (dismissed on first interaction) -->
+        <div id="annotations" class="hidden" aria-hidden="true">
+            <!-- Desktop: positioned labels near controls -->
+            <div class="annotation annotation-play annotation-desktop">
+                <span>Hit play to begin...</span>
+            </div>
+            <div class="annotation annotation-dot annotation-desktop">
+                <span>...or click a dot to jump to a storm event</span>
+            </div>
+            <!-- Mobile: single banner -->
+            <div class="annotation-banner">
+                Hit play or tap a dot to begin
+            </div>
+        </div>
+
         <!-- Controls area at bottom of screen -->
         <nav id="controls" aria-label="Playback controls">
 
