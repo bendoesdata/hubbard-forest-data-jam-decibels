@@ -3,7 +3,7 @@
         "hoursPerSecond": 2,
         "timelineVariable": "streamflow",
         "stormThreshold": 5,
-        "streamflowThreshold": 0.5,
+        "streamflowThreshold": 0.1,
         "audioPath": "audio/sonic-flows.mp3"
     },
 

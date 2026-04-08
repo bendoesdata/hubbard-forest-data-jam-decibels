@@ -111,7 +111,7 @@ const App = (() => {
         const threshold = isStreamflow
             ? config.playback.streamflowThreshold
             : config.playback.stormThreshold;
-        const columnName = isStreamflow ? 'Stream_Discharge_mm_hr' : 'Precipitation_mm_hr';
+        const columnName = isStreamflow ? 'streamflow_cfs' : 'Precipitation_mm_hr';
 
         stormIndices = [];
         for (let i = 0; i < unnormData.length; i++) {
@@ -391,11 +391,12 @@ const App = (() => {
     function announceIfStorm() {
         if (stormIndices.includes(currentIndex)) {
             const isStreamflow = (config.playback.timelineVariable || 'precipitation') === 'streamflow';
-            const colName = isStreamflow ? 'Stream_Discharge_mm_hr' : 'Precipitation_mm_hr';
+            const colName = isStreamflow ? 'streamflow_cfs' : 'Precipitation_mm_hr';
             const val = parseFloat(unnormData[currentIndex][colName]) || 0;
             const label = isStreamflow ? 'streamflow' : 'precipitation';
+            const unit = isStreamflow ? 'cubic feet per second' : 'millimetres per hour';
             els.stormAnnounce.textContent =
-                `Storm event: ${val.toFixed(1)} millimetres per hour ${label} on ${formatDate(dates[currentIndex])}`;
+                `Storm event: ${val.toFixed(1)} ${unit} ${label} on ${formatDate(dates[currentIndex])}`;
         }
     }
 
@@ -440,7 +441,7 @@ const App = (() => {
         window.ShaderManager.render({
             time: elapsed,
             precipitation: parseFloat(row.Precipitation_mm_hr) || 0,
-            streamflow: parseFloat(row.Stream_Discharge_mm_hr) || 0,
+            streamflow: parseFloat(row.streamflow_cfs) || 0,
             evapotranspiration: parseFloat(row.Evapotranspiration_mm_hr) || 0,
             soilMoisture: parseFloat(row.Soil_mm) || 0,
             snow: parseFloat(row.Snow_mm) || 0,
@@ -595,7 +596,7 @@ const App = (() => {
 
         // Extract values for the timeline (configurable variable)
         const timelineColName = (config.playback.timelineVariable === 'streamflow')
-            ? 'Stream_Discharge_mm_hr' : 'Precipitation_mm_hr';
+            ? 'streamflow_cfs' : 'Precipitation_mm_hr';
         const timelineValues = unnormData.map(
             row => parseFloat(row[timelineColName]) || 0
         );
