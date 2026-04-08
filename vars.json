@@ -1,8 +1,9 @@
 {
     "playback": {
         "hoursPerSecond": 2,
-        "timelineVariable": "streamflow",
+        "timelineVariable": "precipitation",
         "stormThreshold": 5,
+        "dotVariable": "streamflow",
         "streamflowThreshold": 0.1,
         "audioPath": "audio/sonic-flows.mp3"
     },

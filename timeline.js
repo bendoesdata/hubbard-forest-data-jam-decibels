@@ -50,21 +50,27 @@ const Timeline = (() => {
 
         ctx.clearRect(0, 0, w, h);
 
-        // Find max precipitation for scaling colour intensity
-        let maxPrecip = 0;
+        // Find max value for scaling; use log scale for heavy-tailed distributions
+        let maxVal = 0;
+        let minNonZero = Infinity;
         for (let i = 0; i < precipData.length; i++) {
-            if (precipData[i] > maxPrecip) maxPrecip = precipData[i];
+            if (precipData[i] > maxVal) maxVal = precipData[i];
+            if (precipData[i] > 0 && precipData[i] < minNonZero) minNonZero = precipData[i];
         }
-        if (maxPrecip === 0) maxPrecip = 1; // avoid division by zero
+        if (maxVal === 0) maxVal = 1;
+        if (minNonZero === Infinity) minNonZero = maxVal;
+        const logMin = Math.log(minNonZero);
+        const logMax = Math.log(maxVal);
+        const logRange = logMax - logMin || 1;
 
-        // Draw precipitation intensity bars
-        // Each hour gets a thin vertical strip
+        // Draw intensity bars (each hour gets a thin vertical strip)
         const barWidth = w / totalHours;
 
         for (let i = 0; i < totalHours; i++) {
-            const intensity = precipData[i] / maxPrecip;
+            if (precipData[i] <= 0) continue;
+            const intensity = (Math.log(precipData[i]) - logMin) / logRange;
             if (intensity > 0.01) {
-                const alpha = 0.15 + intensity * 0.85; // min 15% opacity for visible rain
+                const alpha = 0.15 + intensity * 0.85;
                 ctx.fillStyle = `rgba(74, 144, 217, ${alpha})`;
                 const x = (i / totalHours) * w;
                 ctx.fillRect(x, 0, Math.max(barWidth, 1), h);

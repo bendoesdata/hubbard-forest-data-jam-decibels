@@ -105,18 +105,16 @@ const App = (() => {
         // Extract dates from the unnormalized data (first column is the date)
         dates = unnormData.map(row => new Date(row.Date));
 
-        // Identify storm events based on configured variable and threshold
-        const timelineVar = config.playback.timelineVariable || 'precipitation';
-        const isStreamflow = timelineVar === 'streamflow';
-        const threshold = isStreamflow
-            ? config.playback.streamflowThreshold
-            : config.playback.stormThreshold;
-        const columnName = isStreamflow ? 'streamflow_cfs' : 'Precipitation_mm_hr';
+        // Identify storm events for dots (uses normalized data)
+        const dotVar = config.playback.dotVariable || 'precipitation';
+        const dotIsStreamflow = dotVar === 'streamflow';
+        const dotColumn = dotIsStreamflow ? 'streamflow_cfs' : 'Precipitation_mm_hr';
+        const dotThreshold = config.playback.streamflowThreshold;
 
         stormIndices = [];
-        for (let i = 0; i < unnormData.length; i++) {
-            const val = parseFloat(unnormData[i][columnName]) || 0;
-            if (val >= threshold) {
+        for (let i = 0; i < normData.length; i++) {
+            const val = parseFloat(normData[i][dotColumn]) || 0;
+            if (val >= dotThreshold) {
                 stormIndices.push(i);
             }
         }
@@ -390,11 +388,11 @@ const App = (() => {
      */
     function announceIfStorm() {
         if (stormIndices.includes(currentIndex)) {
-            const isStreamflow = (config.playback.timelineVariable || 'precipitation') === 'streamflow';
-            const colName = isStreamflow ? 'streamflow_cfs' : 'Precipitation_mm_hr';
+            const dotIsStreamflow = (config.playback.dotVariable || 'precipitation') === 'streamflow';
+            const colName = dotIsStreamflow ? 'streamflow_cfs' : 'Precipitation_mm_hr';
             const val = parseFloat(unnormData[currentIndex][colName]) || 0;
-            const label = isStreamflow ? 'streamflow' : 'precipitation';
-            const unit = isStreamflow ? 'cubic feet per second' : 'millimetres per hour';
+            const label = dotIsStreamflow ? 'streamflow' : 'precipitation';
+            const unit = dotIsStreamflow ? 'cubic feet per second' : 'millimetres per hour';
             els.stormAnnounce.textContent =
                 `Storm event: ${val.toFixed(1)} ${unit} ${label} on ${formatDate(dates[currentIndex])}`;
         }
