@@ -37,11 +37,12 @@ window.ShaderManager = (() => {
     const floodAmtAtten = 0.75;
 
     // --- Baked parameters (set at init, not changeable at runtime) ---
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const mapHeight = 0.65;
     const blurRadius = 1;
     const blurPreshrink = 1;
     const smallDetail = 0.5;
-    const maxParticlesSqrt = 512;
+    const maxParticlesSqrt = isMobile ? 256 : 512;  // fewer particles on mobile
     const blurPreshrinkFF = 0;
     const blurRadiusFF = 9;
 
@@ -138,23 +139,26 @@ window.ShaderManager = (() => {
             ]);
 
             // Load DEM heightmap image
+            // iOS limits textures to 4096px — use UnsignedByte on mobile
             const DEM_IMG = new ImagePass("./assets/dem.png", {
                 wrapMode: "repeat",
                 filterMode: "mipmap",
                 generateMipmaps: true,
                 format: THREE.RGBAFormat,
-                type: THREE.HalfFloatType,
+                type: isMobile ? THREE.UnsignedByteType : THREE.HalfFloatType,
             });
             await DEM_IMG.ready;
 
-            const imgRes = new THREE.Vector2(DEM_IMG.width, DEM_IMG.height);
-            imgAspect = imgRes.x / imgRes.y;
-            const halfRes = new THREE.Vector2(DEM_IMG.width / 2.0, DEM_IMG.height / 2.0);
-            const quarterRes = new THREE.Vector2(DEM_IMG.width / 4.0, DEM_IMG.height / 4.0);
+            // On mobile, halve DEM resolution to stay within GPU limits
+            const demScale = isMobile ? 0.5 : 1.0;
+            const imgRes = new THREE.Vector2(DEM_IMG.width * demScale, DEM_IMG.height * demScale);
+            imgAspect = DEM_IMG.width / DEM_IMG.height;  // aspect from original, not scaled
+            const halfRes = new THREE.Vector2(imgRes.x / 2.0, imgRes.y / 2.0);
+            const quarterRes = new THREE.Vector2(imgRes.x / 4.0, imgRes.y / 4.0);
             const zHeight = 1 / mapHeight / quarterRes.y;
 
-            // Create Three.js renderer
-            renderer = new THREE.WebGLRenderer();
+            // Create Three.js renderer (prefer WebGL2, fall back to WebGL1)
+            renderer = new THREE.WebGLRenderer({ powerPreference: 'default' });
             scene = new THREE.Scene();
             container.appendChild(renderer.domElement);
 
@@ -234,7 +238,7 @@ window.ShaderManager = (() => {
                 width: quarterRes.x,
                 height: quarterRes.y,
                 format: THREE.RGBAFormat,
-                type: THREE.HalfFloatType,
+                type: isMobile ? THREE.UnsignedByteType : THREE.HalfFloatType,
                 generateMipmaps: true,
             });
             boxBlurFlowFieldPass.render();
@@ -302,16 +306,17 @@ window.ShaderManager = (() => {
             scene.add(points);
 
             // 8. Post-process targets
+            const rtType = isMobile ? THREE.UnsignedByteType : THREE.HalfFloatType;
             particleRT = new THREE.WebGLRenderTarget(width, height, {
                 format: THREE.RGBAFormat,
-                type: THREE.HalfFloatType,
+                type: rtType,
             });
 
             trailFeedback = new FeedbackLoop(renderer, null, {
                 width: width,
                 height: height,
                 format: THREE.RGBAFormat,
-                type: THREE.HalfFloatType,
+                type: rtType,
             });
 
             trailDecayPass = new GLSLPass(renderer, {
