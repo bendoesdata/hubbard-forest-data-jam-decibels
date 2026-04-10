@@ -452,7 +452,20 @@ const App = (() => {
      */
     function openInfoDialog() {
         els.infoDialog.classList.remove('hidden');
-        els.infoClose.focus();
+        els.infoDialog.scrollTop = 0;
+
+        // Mobile browsers may restore prior scroll position or scroll focused
+        // elements into view after open; force top on the next frame as well.
+        requestAnimationFrame(() => {
+            els.infoDialog.scrollTop = 0;
+        });
+
+        // Keep keyboard accessibility without triggering scroll jumps.
+        try {
+            els.infoClose.focus({ preventScroll: true });
+        } catch {
+            els.infoClose.focus();
+        }
     }
 
     /**

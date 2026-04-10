@@ -83,6 +83,7 @@ body {
     position: fixed;
     inset: 0;
     z-index: 100;
+    overflow-y: scroll;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -532,6 +533,9 @@ body {
 
 /* --- Mobile layout --- */
 @media (max-width: 600px) {
+    .info-content {
+        margin-top: 100px;
+    }
     /* Smaller header text */
     #site-header {
         top: 16px;
@@ -548,7 +552,7 @@ body {
 
     /* Move info button closer to edge */
     #info-btn-container {
-        top: 16px;
+        top: 56px;
         right: 16px;
     }
 

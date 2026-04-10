@@ -21,12 +21,12 @@
             },
             {
                 "label": "Precipitation",
-                "description": "represented by rapid plucked notes",
+                "description": "rapid plucked notes",
                 "audioPath": "audio/samples/precipitation.mp3"
             },
             {
                 "label": "Soil moisture",
-                "description": "represented by the pitch of the bass melody",
+                "description": "the pitch of the bass melody",
                 "audioPath": "audio/samples/soil-moisture.mp3"
             }
         ]
@@ -34,9 +34,9 @@
 
     "info": {
         "title": "About This Experience",
-        "sonification": "The audiovisual experience maps hydrological data from the Hubbard Brook Experimental Forest to sound. Precipitation, streamflow, and soil moisture are each mapped to different visual and sonic parameters, allowing you to hear how these variables relate to each other — and how they evolve in the hours following large precipitation events. See the start sreen for a legend of the different data variables and their sonic representations.",
+        "sonification": "This audiovisual experience maps hydrological data from the Hubbard Brook Experimental Forest to sound. Precipitation, streamflow, and soil moisture are each mapped to different visual and sonic parameters, allowing you to hear how these variables relate to each other — and how they evolve in the hours following large precipitation events. Yellow dots on the timeline represent streamflow increase events. Blue stripes indicate increased precipitation. See the start sreen for a legend of the different data variables and their sonic representations.",
         "credits": [
-            "<a href='https://bdextercooley.com'>Ben Dexter Cooley</a> (sonification, sound design)",
+            "<a href='https://bdextercooley.com'>Ben Dexter Cooley</a> (sonification, sound design, field recordings)",
             "<a href='https://duncangeere.com'>Duncan Geere</a> (design, visualization, development)",
             "<a href='https://datagrazing.com'>Max Graze</a> (sonification concept)",
             "<a href='https://github.com/mrplCheese'>Micah Lewis</a> (data analysis)",
