@@ -5,6 +5,7 @@
         "stormThreshold": 5,
         "dotVariable": "streamflow",
         "streamflowThreshold": 0.1,
+        "dotOffset": 4,
         "audioPath": "audio/sonic-flows-test.mp3"
     },
 

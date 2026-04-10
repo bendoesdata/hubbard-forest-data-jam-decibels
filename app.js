@@ -169,9 +169,11 @@ const App = (() => {
             dot.setAttribute('tabindex', '-1'); // navigable but not in main tab order
             dot.style.left = `${(idx / total) * 100}%`;
 
-            // Click to jump to this storm event
+            // Click to jump to this storm event (with configurable offset)
+            const offset = config.playback.dotOffset || 0;
+            const jumpIdx = Math.max(0, idx - offset);
             dot.addEventListener('click', () => {
-                handleScrub(idx);
+                handleScrub(jumpIdx);
             });
 
             container.appendChild(dot);
