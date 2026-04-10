@@ -10,7 +10,7 @@
     },
 
     "splash": {
-        "description": "This is an immersive audiovisual experience exploring how the Hubbard Brook Experimental Forest responds to storms. Precipitation, streamflow, and other hydrological data from one full year (March 2024-2025) are woven into generative visuals and a data sonification.",
+        "description": "This is an immersive audiovisual experience exploring how the Hubbard Brook Experimental Forest responds to storms and other environmental factors. Precipitation, streamflow, and soil moisture data from one full year (March 2024-2025) are woven into generative visuals and a data sonification. Each second represents 2 hours of data: listen to the entire piece, or scrub through the timeline to explore specific events.",
         "audioNote": "This experience includes audio. Please ensure your sound is on.",
         "enterButton": "Begin Experience",
         "legend": [
