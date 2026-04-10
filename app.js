@@ -81,6 +81,47 @@ const App = (() => {
             els.infoCredits.appendChild(li);
         }
 
+        // Audio legend on splash screen
+        const legendEl = document.getElementById('audio-legend');
+        if (legendEl && config.splash.legend) {
+            legendEl.innerHTML = '';
+            for (const item of config.splash.legend) {
+                const row = document.createElement('div');
+                row.className = 'legend-row';
+
+                const btn = document.createElement('button');
+                btn.className = 'legend-play-btn';
+                btn.type = 'button';
+                btn.setAttribute('aria-label', `Play ${item.label} sample`);
+                btn.innerHTML = '<span class="legend-icon-play">&#9654;</span>';
+
+                let audio = null;
+                btn.addEventListener('click', () => {
+                    if (audio && !audio.paused) {
+                        audio.pause();
+                        audio.currentTime = 0;
+                        btn.innerHTML = '<span class="legend-icon-play">&#9654;</span>';
+                    } else {
+                        // Create new Audio each time so multiple can play at once
+                        audio = new Audio(item.audioPath);
+                        audio.addEventListener('ended', () => {
+                            btn.innerHTML = '<span class="legend-icon-play">&#9654;</span>';
+                        });
+                        audio.play().catch(() => {});
+                        btn.innerHTML = '<span class="legend-icon-stop"></span>';
+                    }
+                });
+
+                const text = document.createElement('span');
+                text.className = 'legend-text';
+                text.innerHTML = `<strong>${item.label}</strong> — ${item.description}`;
+
+                row.appendChild(btn);
+                row.appendChild(text);
+                legendEl.appendChild(row);
+            }
+        }
+
         // Timeline ARIA label
         els.timelineCanvas.setAttribute('aria-label', config.ui.timelineLabel);
     }

@@ -12,7 +12,24 @@
     "splash": {
         "description": "This is an immersive audiovisual experience exploring how the Hubbard Brook Experimental Forest responds to storms. Precipitation, streamflow, and other hydrological data from one full year are woven into generative visuals and sound.",
         "audioNote": "This experience includes audio. Please ensure your sound is on.",
-        "enterButton": "Begin Experience"
+        "enterButton": "Begin Experience",
+        "legend": [
+            {
+                "label": "Streamflow",
+                "description": "Represented by a swelling ambient pad",
+                "audioPath": "audio/samples/streamflow.mp3"
+            },
+            {
+                "label": "Precipitation",
+                "description": "Represented by rapid plucked notes",
+                "audioPath": "audio/samples/precipitation.mp3"
+            },
+            {
+                "label": "Soil moisture",
+                "description": "Represented by the pitch of the bass melody",
+                "audioPath": "audio/samples/soil-moisture.mp3"
+            }
+        ]
     },
 
     "info": {
