@@ -6,7 +6,7 @@
         "dotVariable": "streamflow",
         "streamflowThreshold": 0.1,
         "dotOffset": 4,
-        "audioPath": "audio/sonic-flows-corrected.mp3"
+        "audioPath": "audio/final-sonification.mp3"
     },
 
     "splash": {
