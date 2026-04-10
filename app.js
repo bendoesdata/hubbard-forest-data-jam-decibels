@@ -261,12 +261,14 @@ const App = (() => {
 
     /**
      * Calculate the audio offset (seconds) for a given data index.
-     * Maps the timeline position linearly to the audio duration.
+     * Maps the timeline linearly to the data portion of the audio
+     * (totalHours / hoursPerSecond), ignoring any reverb tail beyond that.
      */
     function indexToAudioOffset(index) {
         if (!audioReady) return 0;
+        const dataDuration = unnormData.length / (config.playback.hoursPerSecond || 2);
         const fraction = index / (unnormData.length - 1);
-        return fraction * audioDuration;
+        return fraction * dataDuration;
     }
 
     // ========================================================================
