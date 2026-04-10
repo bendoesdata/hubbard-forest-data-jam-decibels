@@ -16,17 +16,17 @@
         "legend": [
             {
                 "label": "Streamflow",
-                "description": "Represented by a swelling ambient pad",
+                "description": "represented by a swelling ambient pad",
                 "audioPath": "audio/samples/streamflow.mp3"
             },
             {
                 "label": "Precipitation",
-                "description": "Represented by rapid plucked notes",
+                "description": "represented by rapid plucked notes",
                 "audioPath": "audio/samples/precipitation.mp3"
             },
             {
                 "label": "Soil moisture",
-                "description": "Represented by the pitch of the bass melody",
+                "description": "represented by the pitch of the bass melody",
                 "audioPath": "audio/samples/soil-moisture.mp3"
             }
         ]
