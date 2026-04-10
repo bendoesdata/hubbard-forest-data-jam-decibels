@@ -292,6 +292,7 @@ body {
     inset: 0;
     z-index: 200;
     display: flex;
+    overflow-y: scroll;
     align-items: center;
     justify-content: center;
     background: rgba(5, 5, 10, 0.92);
